@@ -224,6 +224,7 @@ runs:
           --keep GCP_DA_CN_SCRATCHNET2_KEY \
           --keep GCP_DA_CN_MAINNET_KEY \
           --keep GCP_DA_CN_SPLICE_KEY \
+          --keep GCP_CLUSTER_HOSTNAME \
           --keep CIRCLE_BRANCH \
           --keep TARGET_CLUSTER \
           --keep DA_REPO_ROOT \
