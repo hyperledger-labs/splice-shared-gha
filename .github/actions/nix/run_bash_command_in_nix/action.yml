@@ -19,6 +19,17 @@ inputs:
     description: 'The bash command to run before retrying the command'
     required: false
     default: ""
+  cluster:
+    description: 'The cluster to target (sets TARGET_CLUSTER). Use "none" if no cluster is needed.'
+    required: false
+    default: "none"
+  gce_authenticate:
+    description: 'Whether to authenticate to GCP using the key for the active cluster project'
+    required: false
+    default: "false"
+  splice_root:
+    description: "Path to splice repo"
+    default: ${{ github.repository == 'hyperledger-labs/splice' && '.' || 'splice' }}
 runs:
   using: 'composite'
   steps:
@@ -74,6 +85,10 @@ runs:
         # We write the whole nix command to a separate file, so that we can run nix <command> &, and wait for it,
         # so that we can properly trap signals and kill all processes in the process group.
 
+        export TARGET_CLUSTER="${{ inputs.cluster }}"
+        export DA_REPO_ROOT="$GITHUB_WORKSPACE"
+        export SPLICE_ROOT="${{ inputs.splice_root }}"
+
         # append random string to the cmd.sh file to avoid parallel steps writing and executing the same cmd.sh files
         CMD_FILE=$(mktemp cmd-XXXXXX.sh)
         echo "temporary CMD_FILE: $CMD_FILE"
@@ -83,7 +98,57 @@ runs:
 
           . .envrc.vars
 
-          # TODO(#615): once we support cluster deployments in GHA, add cluster authentication here
+          if [[ "$TARGET_CLUSTER" != none ]]; then
+            . $DA_REPO_ROOT/cluster/deployment/$TARGET_CLUSTER/.envrc.vars
+            . $SPLICE_ROOT/build-tools/lib/cluster.envrc.vars
+            echo "Using cluster hostname suffix: ${GCP_CLUSTER_HOSTNAME}"
+          fi
+
+          if [[ "${{ inputs.gce_authenticate }}" == "true" ]]; then
+            if [[ "$TARGET_CLUSTER" == none ]]; then
+              echo "TARGET_CLUSTER must be set"
+              exit 1
+            fi
+            # Authenticate to the correct GCP project for the cluster
+            echo "Authenticating to cluster \"$TARGET_CLUSTER\" in project \"${CLOUDSDK_CORE_PROJECT}\""
+            case ${CLOUDSDK_CORE_PROJECT} in
+              da-cn-scratchnet)
+                export CN_ACTIVE_ENVIRONMENT_KEY="${GCP_DA_CN_SCRATCHNET_KEY}"
+                ;;
+
+              da-cn-scratchnet2)
+                export CN_ACTIVE_ENVIRONMENT_KEY="${GCP_DA_CN_SCRATCHNET2_KEY}"
+                ;;
+
+              da-cn-ci)
+                export CN_ACTIVE_ENVIRONMENT_KEY="${GCP_DA_CN_CI_KEY}"
+                ;;
+
+              da-cn-ci-2)
+                export CN_ACTIVE_ENVIRONMENT_KEY="${GCP_DA_CN_CI_2_KEY}"
+                ;;
+
+              da-cn-devnet)
+                export CN_ACTIVE_ENVIRONMENT_KEY="${GCP_DA_CN_DEVNET_KEY}"
+                ;;
+
+              da-cn-mainnet)
+                export CN_ACTIVE_ENVIRONMENT_KEY="${GCP_DA_CN_MAINNET_KEY}"
+                ;;
+
+              da-cn-splice)
+                export CN_ACTIVE_ENVIRONMENT_KEY="${GCP_DA_CN_SPLICE_KEY}"
+                ;;
+
+              *)
+                echo "Cannot authenticate to GCP project without key: ${CLOUDSDK_CORE_PROJECT}"
+                exit 1
+                ;;
+            esac
+
+            # GOOGLE_CREDENTIALS variable is used by pulumi - for the operator
+            export GOOGLE_CREDENTIALS=${CN_ACTIVE_ENVIRONMENT_KEY}
+          fi
 
           MAX_RETRY=${{ inputs.cmd_retry_count }}
           n=0
@@ -161,6 +226,7 @@ runs:
           --keep GCP_DA_CN_SPLICE_KEY \
           --keep CIRCLE_BRANCH \
           --keep TARGET_CLUSTER \
+          --keep DA_REPO_ROOT \
           $ADDITIONAL_NIX_ARGS \
           --command bash $CMD_FILE &
         PID=$!
