@@ -71,7 +71,7 @@ runs:
         echo ${{ inputs.nix_path }} > /tmp/nix_path # Create a file to indicate where the nix config is (so we don't need to re-specifify nix_path to run_bash_command_in_nix)
 
     - name: Download cache (for non-self-hosted)
-      if: ${{ !startsWith(runner.name, 'self-hosted') }}
+      if: ${{ ! (startsWith(runner.name, 'self-hosted') || startsWith(runner.name, 'dach-ny')) }}
       shell: bash
       run: |
         set -euxo pipefail
