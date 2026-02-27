@@ -106,16 +106,16 @@ runs:
         # TODO(#1296): When this runner stops using non-oss, move this to one that does
         save_nix_cache: ${{ inputs.runner_index == 0 && inputs.test_suite_name == 'canton-enterprise' }}
 
-    # - name: Wait for postgres
-    #   uses: ./splice-shared-gha/.github/actions/nix/run_bash_command_in_nix
-    #   env:
-    #     POSTGRES_HOST: localhost
-    #     POSTGRES_PORT: 5432
-    #     POSTGRES_USER: postgres
-    #     POSTGRES_PASSWORD: postgres
-    #   with:
-    #     cmd: ./scripts/postgres.sh external wait
-    #     additional_nix_args: "--keep POSTGRES_HOST --keep POSTGRES_PORT --keep POSTGRES_USER --keep POSTGRES_PASSWORD"
+    - name: Wait for postgres
+      uses: ./splice-shared-gha/.github/actions/nix/run_bash_command_in_nix
+      env:
+        POSTGRES_HOST: localhost
+        POSTGRES_PORT: 5432
+        POSTGRES_USER: postgres
+        POSTGRES_PASSWORD: postgres
+      with:
+        cmd: ./scripts/postgres.sh external wait
+        additional_nix_args: "--keep POSTGRES_HOST --keep POSTGRES_PORT --keep POSTGRES_USER --keep POSTGRES_PASSWORD"
 
     # Starting canton before setting up SBT, to gain a bit of time doing both in parallel
     - name: Start Canton
@@ -215,12 +215,12 @@ runs:
       if: ${{ fromJson(inputs.with_docker_images) }}
       uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 #v3.6.0
 
-    - name: Setup user docker permissions
-      uses: ./splice-shared-gha/.github/actions/nix/run_bash_command_in_nix
-      with:
-        cmd: |
-          /usr/bin/sudo mkdir -p ~/.docker/buildx
-          /usr/bin/sudo /usr/bin/chown $(whoami):docker ~/.docker/buildx
+    # - name: Setup user docker permissions
+    #   uses: ./splice-shared-gha/.github/actions/nix/run_bash_command_in_nix
+    #   with:
+    #     cmd: |
+    #       /usr/bin/sudo mkdir -p ~/.docker/buildx
+    #       /usr/bin/sudo /usr/bin/chown $(whoami):docker ~/.docker/buildx
 
     - name: Build Docker images
       if: ${{ fromJson(inputs.with_docker_images) }}
