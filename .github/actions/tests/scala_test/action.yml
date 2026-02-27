@@ -216,20 +216,25 @@ runs:
       if: ${{ fromJson(inputs.with_docker_images) }}
       uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 #v3.6.0
 
-    - name: Build Docker images
-      if: ${{ fromJson(inputs.with_docker_images) }}
+    - name: prep docker
       uses: ./splice-shared-gha/.github/actions/nix/run_bash_command_in_nix
       with:
         cmd: |
-          export ARTIFACTORY_USER="${{ inputs.artifactory_user }}"
-          export ARTIFACTORY_PASSWORD="${{ inputs.artifactory_password }}"
-          export CIRCLE_REPOSITORY_URL="${{ github.repositoryUrl }}"
-          export CIRCLE_SHA1="${{ github.sha }}"
           /usr/bin/sudo mkdir -p ~/.docker/buildx
           /usr/bin/sudo /usr/bin/chown $(whoami):docker ~/.docker/buildx
-          make docker-build -j
-        cmd_retry_count: 5 # Retry in case of dependency download errors
-        additional_nix_args: "--keep DOCKER_CERT_PATH --keep DOCKER_HOST --keep DOCKER_MACHINE_NAME --keep DOCKER_TLS_VERIFY --keep PULUMI_VERSION --keep NO_PROXY --keep CIRCLE_REPOSITORY_URL --keep CIRCLE_SHA1"
+
+    # - name: Build Docker images
+    #   if: ${{ fromJson(inputs.with_docker_images) }}
+    #   uses: ./splice-shared-gha/.github/actions/nix/run_bash_command_in_nix
+    #   with:
+    #     cmd: |
+    #       export ARTIFACTORY_USER="${{ inputs.artifactory_user }}"
+    #       export ARTIFACTORY_PASSWORD="${{ inputs.artifactory_password }}"
+    #       export CIRCLE_REPOSITORY_URL="${{ github.repositoryUrl }}"
+    #       export CIRCLE_SHA1="${{ github.sha }}"
+    #       make docker-build -j
+    #     cmd_retry_count: 5 # Retry in case of dependency download errors
+    #     additional_nix_args: "--keep DOCKER_CERT_PATH --keep DOCKER_HOST --keep DOCKER_MACHINE_NAME --keep DOCKER_TLS_VERIFY --keep PULUMI_VERSION --keep NO_PROXY --keep CIRCLE_REPOSITORY_URL --keep CIRCLE_SHA1"
 
     - name: Wait for Canton to be ready
       shell: bash
